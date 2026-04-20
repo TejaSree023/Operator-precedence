@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Operator Precedence Parse Tree Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+    <div class="page-decor page-decor-a" aria-hidden="true"></div>
+    <div class="page-decor page-decor-b" aria-hidden="true"></div>
+
+    <header class="topbar section-fade">
+        <div class="title-wrap">
+            <h1>Operator Precedence Parse Tree Visualizer</h1>
+            <p class="subhead">Compare incorrect vs precedence-aware parse trees with interactive, stepwise evaluation.</p>
+        </div>
+        <nav class="nav-links">
+            <a href="#input-section">Input</a>
+            <a href="#trees-section">Visualizer</a>
+            <a href="#analysis-section">Analysis</a>
+        </nav>
+    </header>
+
+    <main class="dashboard">
+        <section id="input-section" class="section-card section-fade input-panel">
+            <h2>Grammar Input</h2>
+
+            <label for="grammar">Grammar Rules</label>
+            <textarea id="grammar" spellcheck="false" placeholder="E -> E + E | E * E | ( E ) | id"></textarea>
+
+            <label for="precedence">Precedence Declarations</label>
+            <textarea id="precedence" spellcheck="false" placeholder="%left + -
+%left * /"></textarea>
+
+            <label for="expression">Expression (optional)</label>
+            <input id="expression" type="text" placeholder="id + id * id" />
+
+            <div class="actions">
+                <button id="analyzeBtn" class="btn primary">Analyze Grammar</button>
+                <button id="exportJsonBtn" class="btn ghost" type="button">Export JSON</button>
+                <span id="status" class="status">Ready for input</span>
+            </div>
+        </section>
+
+        <section id="trees-section" class="section-card section-fade output-panel visualizer-panel">
+            <div class="visualizer-header">
+                <h2>Tree Visualizer</h2>
+                <label class="toggle-wrap" for="togglePrecedenceRules">
+                    <input id="togglePrecedenceRules" type="checkbox" />
+                    <span>Show Precedence Rules</span>
+                </label>
+            </div>
+
+            <p id="treeMessage" class="muted"></p>
+
+            <div class="legend-panel" aria-label="Parse tree legend">
+                <h3>Legend</h3>
+                <div class="legend-items">
+                    <span class="legend-item legend-e">E = Expression</span>
+                    <span class="legend-item legend-id">id = Identifier</span>
+                    <span class="legend-item legend-op">+, * = Operators</span>
+                </div>
+            </div>
+
+            <div id="precedencePanel" class="precedence-panel hidden">
+                <h3>Precedence Rules</h3>
+                <div id="precedenceRules"></div>
+            </div>
+
+            <div id="parseTrees" class="tree-grid"></div>
+
+            <div class="result-block">
+                <h3>Step-by-Step Evaluation</h3>
+                <div id="evaluation"></div>
+            </div>
+        </section>
+
+        <section id="analysis-section" class="section-card section-fade output-panel">
+            <div class="result-block first-block">
+                <h2>Analysis Summary</h2>
+                <div id="summary" class="summary-grid"></div>
+            </div>
+
+            <div class="result-block">
+                <h2>Extracted Tokens</h2>
+                <div id="extracted"></div>
+            </div>
+
+            <div class="result-block">
+                <h2>Conflict Analysis</h2>
+                <div id="conflicts"></div>
+            </div>
+
+            <div class="result-block">
+                <h2>Suggested Fixes</h2>
+                <div id="suggestions"></div>
+            </div>
+
+            <div class="result-block">
+                <div class="block-header-inline">
+                    <h2>Auto-Corrected Grammar</h2>
+                    <button id="copyAutocorrect" class="btn ghost" type="button">Copy</button>
+                </div>
+                <pre id="autocorrect" class="code-box"></pre>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="/static/app.js"></script>
+</body>
+</html>
