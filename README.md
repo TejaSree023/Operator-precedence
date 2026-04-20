@@ -2,6 +2,10 @@
 
 A Flask full-stack web app that analyzes context-free grammars, detects ambiguity and precedence/associativity conflicts, and visualizes parse trees.
 
+## Live Demo
+
+https://operator-precedence-1.onrender.com
+
 ## Features
 
 - Grammar input via production rules (`E -> E + E | E * E | id`)
