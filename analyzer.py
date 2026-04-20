@@ -2,8 +2,6 @@ import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Tuple
 
-from graphviz import Digraph
-
 TOKEN_PATTERN = re.compile(r"%\w+|->|\||[A-Za-z_][A-Za-z0-9_]*|\S")
 EXPR_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+|==|!=|<=|>=|\|\||&&|\S")
 
@@ -470,43 +468,118 @@ class GrammarAnalyzer:
         }
 
     def _render_graphviz_svg(self, tree: Dict, graph_name: str) -> Tuple[str, Optional[str]]:
-        dot = Digraph(name=graph_name, format="svg")
-        dot.attr(rankdir="TB", bgcolor="white", splines="ortho", nodesep="0.45", ranksep="0.7")
-        dot.attr("graph", pad="0.2")
-        dot.attr("node", shape="ellipse", style="filled", color="#d7d1c4", fillcolor="#fffdf9", fontname="Helvetica", fontsize="12")
-        dot.attr("edge", color="#555", arrowsize="0.7")
-
-        operator_symbols = {"+", "-", "*", "/", "%", "^", "&&", "||", "==", "!=", "<", ">", "<=", ">="}
-        counter = 0
-
-        def add_node(node: Dict, parent_id: Optional[str] = None) -> str:
-            nonlocal counter
-            node_id = f"n{counter}"
-            counter += 1
-            label = node["label"]
-            if label in operator_symbols:
-                dot.node(node_id, label=label, shape="diamond", fillcolor="#ffeede")
-            elif label in {"E", "Expr", "Term", "Factor"}:
-                dot.node(node_id, label=label, shape="ellipse", fillcolor="#fff3dc")
-            else:
-                dot.node(node_id, label=label, shape="box", fillcolor="#eef9f6")
-
-            if parent_id is not None:
-                dot.edge(parent_id, node_id)
-
-            for child in node.get("children", []):
-                add_node(child, node_id)
-
-            return node_id
-
-        expression_root_id = add_node(tree)
-        dot.node("root_start", label="Start", shape="oval", fillcolor="#f6e7cc")
-        dot.edge("root_start", expression_root_id)
-
         try:
-            return dot.pipe(format="svg").decode("utf-8"), None
+            return self._render_tree_svg(tree, graph_name), None
         except Exception as exc:
-            return "", f"Graphviz rendering failed: {exc}"
+            return "", f"Tree rendering failed: {exc}"
+
+    def _render_tree_svg(self, tree: Dict, graph_name: str) -> str:
+        operator_symbols = {"+", "-", "*", "/", "%", "^", "&&", "||", "==", "!=", "<", ">", "<=", ">="}
+        node_width = 76
+        leaf_width = 58
+        node_height = 36
+        vertical_gap = 72
+        horizontal_gap = 28
+        margin_x = 28
+        margin_y = 44
+
+        nodes = []
+        edges = []
+        depths = {}
+
+        def collect(node: Dict, depth: int = 0, parent: Optional[int] = None) -> int:
+            index = len(nodes)
+            label = node["label"]
+            children = node.get("children", [])
+            nodes.append({"label": label, "children": [], "depth": depth, "parent": parent})
+            depths[index] = depth
+            if parent is not None:
+                edges.append((parent, index))
+                nodes[parent]["children"].append(index)
+            for child in children:
+                collect(child, depth + 1, index)
+            return index
+
+        collect(tree)
+
+        leaf_positions = {}
+        next_x = 0
+
+        def assign_x(index: int) -> float:
+            nonlocal next_x
+            child_ids = nodes[index]["children"]
+            if not child_ids:
+                x = next_x
+                next_x += 1
+                leaf_positions[index] = x
+                return x
+            child_xs = [assign_x(child_id) for child_id in child_ids]
+            x = sum(child_xs) / len(child_xs)
+            leaf_positions[index] = x
+            return x
+
+        assign_x(0)
+
+        max_depth = max(depths.values()) if depths else 0
+        max_x = max(leaf_positions.values()) if leaf_positions else 0
+        canvas_width = max(420, int((max_x + 1) * (node_width + horizontal_gap) + margin_x * 2))
+        canvas_height = max(280, int((max_depth + 1) * vertical_gap + margin_y * 2))
+
+        def node_style(label: str) -> Tuple[str, str, str, str]:
+            if label in operator_symbols:
+                return "circle", "#d98c3f", "#b5732f", "#ffffff"
+            if label in {"E", "Expr", "Term", "Factor", "Primary", "Atom", "Value"}:
+                return "roundrect", "#f4ddbb", "#d5a86e", "#5a3e2b"
+            return "roundrect", "#efefef", "#bdbdbd", "#5a3e2b"
+
+        def node_center(index: int) -> Tuple[float, float]:
+            x_slot = leaf_positions[index]
+            y_slot = depths[index]
+            return margin_x + x_slot * (node_width + horizontal_gap) + node_width / 2, margin_y + y_slot * vertical_gap + node_height / 2
+
+        svg_parts = [
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{canvas_width}" height="{canvas_height}" viewBox="0 0 {canvas_width} {canvas_height}" role="img" aria-label="{graph_name}">',
+            '<defs>',
+            '<marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">',
+            '<polygon points="0 0, 10 3.5, 0 7" fill="#ad8450" />',
+            '</marker>',
+            '</defs>',
+            '<rect x="0" y="0" width="100%" height="100%" fill="#fffdf8" rx="18" ry="18" />',
+        ]
+
+        for parent, child in edges:
+            x1, y1 = node_center(parent)
+            x2, y2 = node_center(child)
+            start_y = y1 + node_height / 2
+            end_y = y2 - node_height / 2
+            mid_y = (start_y + end_y) / 2
+            path = f"M {x1:.1f} {start_y:.1f} C {x1:.1f} {mid_y:.1f}, {x2:.1f} {mid_y:.1f}, {x2:.1f} {end_y:.1f}"
+            svg_parts.append(
+                f'<path d="{path}" fill="none" stroke="#ad8450" stroke-width="2" marker-end="url(#arrowhead)" opacity="0.92" />'
+            )
+
+        for index, node in enumerate(nodes):
+            label = node["label"]
+            shape, fill, stroke, text_fill = node_style(label)
+            x, y = node_center(index)
+            box_width = leaf_width if label not in {"E", "Expr", "Term", "Factor", "Primary", "Atom", "Value"} and label not in operator_symbols else node_width
+            box_height = node_height
+            if shape == "circle":
+                radius = max(box_width, box_height) / 2
+                svg_parts.append(
+                    f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{radius:.1f}" fill="{fill}" stroke="{stroke}" stroke-width="1.5" />'
+                )
+            else:
+                rx = 12 if label in {"E", "Expr", "Term", "Factor", "Primary", "Atom", "Value"} else 8
+                svg_parts.append(
+                    f'<rect x="{x - box_width / 2:.1f}" y="{y - box_height / 2:.1f}" width="{box_width:.1f}" height="{box_height:.1f}" rx="{rx}" ry="{rx}" fill="{fill}" stroke="{stroke}" stroke-width="1.4" />'
+                )
+            svg_parts.append(
+                f'<text x="{x:.1f}" y="{y + 4:.1f}" text-anchor="middle" font-family="Manrope, Arial, sans-serif" font-size="14" font-weight="700" fill="{text_fill}">{label}</text>'
+            )
+
+        svg_parts.append('</svg>')
+        return "".join(svg_parts)
 
     def _tokenize_expression(self, expression: str) -> List[str]:
         return EXPR_PATTERN.findall(expression)
