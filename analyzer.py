@@ -27,6 +27,10 @@ class GrammarAnalyzer:
         precedence_map = self._precedence_lookup(precedence_table)
         conflicts, ambiguous_patterns = self._detect_conflicts(productions, operators, precedence_map)
 
+        firstvt = self._compute_firstvt(productions, nonterminals, terminals)
+        lastvt = self._compute_lastvt(productions, nonterminals, terminals)
+        op_precedence_table = self._compute_operator_precedence_relations(productions, operators, precedence_map, firstvt, lastvt)
+
         suggestions = self._build_suggestions(operators, precedence_table, ambiguous_patterns)
         auto_correction = self._auto_correct_grammar(operators, precedence_table, bool(ambiguous_patterns))
         parse_trees = self._generate_parse_trees(expression, precedence_map)
@@ -58,6 +62,11 @@ class GrammarAnalyzer:
             "autoCorrection": auto_correction,
             "parseTrees": parse_trees,
             "evaluation": parse_trees.get("evaluation", {}),
+            "operatorPrecedenceAnalysis": {
+                "firstvt": self._format_vt_sets(firstvt),
+                "lastvt": self._format_vt_sets(lastvt),
+                "precedenceRelations": op_precedence_table,
+            },
         }
 
     def _tokenize(self, text: str) -> List[str]:
@@ -766,3 +775,152 @@ class GrammarAnalyzer:
         if remaining:
             ordered.append(sorted(remaining))
         return ordered
+
+    def _compute_firstvt(self, productions: List[Production], nonterminals: Set[str], terminals: Set[str]) -> Dict[str, Set[str]]:
+        firstvt = {nt: set() for nt in nonterminals}
+        changed = True
+        while changed:
+            changed = False
+            for prod in productions:
+                lhs = prod.lhs
+                for alt in prod.alternatives:
+                    for token in alt:
+                        if token in terminals:
+                            if token not in firstvt[lhs]:
+                                firstvt[lhs].add(token)
+                                changed = True
+                            break
+                        elif token in nonterminals:
+                            new_items = firstvt[token] - firstvt[lhs]
+                            if new_items:
+                                firstvt[lhs].update(new_items)
+                                changed = True
+                            if token not in {t for t in alt if t in nonterminals}:
+                                continue
+                        else:
+                            break
+        return firstvt
+
+    def _compute_lastvt(self, productions: List[Production], nonterminals: Set[str], terminals: Set[str]) -> Dict[str, Set[str]]:
+        lastvt = {nt: set() for nt in nonterminals}
+        changed = True
+        while changed:
+            changed = False
+            for prod in productions:
+                lhs = prod.lhs
+                for alt in prod.alternatives:
+                    for token in reversed(alt):
+                        if token in terminals:
+                            if token not in lastvt[lhs]:
+                                lastvt[lhs].add(token)
+                                changed = True
+                            break
+                        elif token in nonterminals:
+                            new_items = lastvt[token] - lastvt[lhs]
+                            if new_items:
+                                lastvt[lhs].update(new_items)
+                                changed = True
+                            if token not in {t for t in alt if t in nonterminals}:
+                                continue
+                        else:
+                            break
+        return lastvt
+
+    def _compute_operator_precedence_relations(self, productions: List[Production], operators: Set[str], precedence_map: Dict[str, Dict], firstvt: Dict[str, Set[str]], lastvt: Dict[str, Set[str]]) -> List[Dict]:
+        relations = []
+        nonterminals = {p.lhs for p in productions}
+        
+        # Direct adjacency: Find operators adjacent in productions
+        for prod in productions:
+            for alt in prod.alternatives:
+                for idx in range(len(alt) - 1):
+                    curr_token = alt[idx]
+                    next_token = alt[idx + 1]
+                    
+                    # Check if both are operators or if we can derive operators from them
+                    curr_ops = {curr_token} if curr_token in operators else (firstvt.get(curr_token, set()) if curr_token in nonterminals else set())
+                    next_ops = {next_token} if next_token in operators else (firstvt.get(next_token, set()) if next_token in nonterminals else set())
+                    
+                    for op1 in curr_ops:
+                        if op1 not in operators:
+                            continue
+                        # For next_ops, check what could appear first
+                        if next_token in operators:
+                            op2 = next_token
+                            if op1 in operators and op2 in operators:
+                                op1_level = precedence_map.get(op1, {}).get("level", -1)
+                                op2_level = precedence_map.get(op2, {}).get("level", -1)
+                                
+                                if op1_level < op2_level:
+                                    relation = "<"
+                                elif op1_level > op2_level:
+                                    relation = ">"
+                                else:
+                                    relation = "="
+                                
+                                relations.append({
+                                    "op1": op1,
+                                    "op2": op2,
+                                    "relation": relation,
+                                    "production": f"{prod.lhs} -> {' '.join(alt)}",
+                                    "op1_level": op1_level,
+                                    "op2_level": op2_level,
+                                })
+                        elif next_token in nonterminals:
+                            # Check FIRSTVT of next_token
+                            for op2 in firstvt.get(next_token, set()):
+                                if op2 in operators:
+                                    op1_level = precedence_map.get(op1, {}).get("level", -1)
+                                    op2_level = precedence_map.get(op2, {}).get("level", -1)
+                                    
+                                    if op1_level < op2_level:
+                                        relation = "<"
+                                    elif op1_level > op2_level:
+                                        relation = ">"
+                                    else:
+                                        relation = "="
+                                    
+                                    relations.append({
+                                        "op1": op1,
+                                        "op2": op2,
+                                        "relation": relation,
+                                        "production": f"{prod.lhs} -> {' '.join(alt)}",
+                                        "op1_level": op1_level,
+                                        "op2_level": op2_level,
+                                    })
+                    
+                    # Also check LASTVT -> FIRSTVT transitions
+                    if curr_token in nonterminals and next_token in nonterminals:
+                        for op1 in lastvt.get(curr_token, set()):
+                            for op2 in firstvt.get(next_token, set()):
+                                if op1 in operators and op2 in operators:
+                                    op1_level = precedence_map.get(op1, {}).get("level", -1)
+                                    op2_level = precedence_map.get(op2, {}).get("level", -1)
+                                    
+                                    if op1_level < op2_level:
+                                        relation = "<"
+                                    elif op1_level > op2_level:
+                                        relation = ">"
+                                    else:
+                                        relation = "="
+                                    
+                                    relations.append({
+                                        "op1": op1,
+                                        "op2": op2,
+                                        "relation": relation,
+                                        "production": f"{prod.lhs} -> {' '.join(alt)}",
+                                        "op1_level": op1_level,
+                                        "op2_level": op2_level,
+                                    })
+        
+        # Deduplicate relations
+        unique_relations = {}
+        for rel in relations:
+            key = (rel["op1"], rel["op2"])
+            if key not in unique_relations:
+                unique_relations[key] = rel
+        
+        return sorted(unique_relations.values(), key=lambda x: (x["op1"], x["op2"]))
+
+    def _format_vt_sets(self, vt_dict: Dict[str, Set[str]]) -> Dict[str, List[str]]:
+        return {nt: sorted(terminals) for nt, terminals in vt_dict.items()}

@@ -701,6 +701,125 @@ input:focus {
     }
 }
 
+/* Operator Precedence Analysis Styles */
+.analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.analysis-card {
+    padding: 1.25rem;
+    background: var(--panel-strong);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow-soft);
+}
+
+.analysis-card.full-width {
+    grid-column: 1 / -1;
+}
+
+.analysis-card h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.vt-sets {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.vt-item {
+    font-size: 0.9rem;
+    padding: 0.6rem 0.8rem;
+    background: var(--panel);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+}
+
+.vt-item strong {
+    color: var(--accent);
+    font-weight: 600;
+    margin-right: 0.5rem;
+}
+
+.vt-terminal {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    background: var(--primary-soft);
+    border-radius: 4px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.85rem;
+    margin-right: 0.4rem;
+    margin-bottom: 0.2rem;
+}
+
+.relations-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.relations-table thead {
+    background: var(--primary-soft);
+    border-bottom: 2px solid var(--accent);
+}
+
+.relations-table th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.relations-table td {
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.relation-row:hover {
+    background: rgba(230, 185, 128, 0.3);
+}
+
+.relation-row.relation-\< {
+    border-left: 3px solid #4d9163;
+}
+
+.relation-row.relation-\> {
+    border-left: 3px solid #d98c3f;
+}
+
+.relation-row.relation-\= {
+    border-left: 3px solid #8a6750;
+}
+
+.op-cell {
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 600;
+    color: var(--accent);
+    max-width: 60px;
+}
+
+.relation-cell {
+    text-align: center;
+    font-weight: 600;
+    color: var(--accent);
+    min-width: 60px;
+}
+
+.prod-cell {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.85rem;
+    color: var(--muted);
+    max-width: 350px;
+    word-break: break-word;
+}
+
 @media (max-width: 1180px) {
     .dashboard {
         grid-template-columns: 1fr;
@@ -741,5 +860,13 @@ input:focus {
     .visualizer-header {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .analysis-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .prod-cell {
+        max-width: 100%;
     }
 }

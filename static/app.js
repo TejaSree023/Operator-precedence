@@ -469,6 +469,75 @@ function renderSuggestions(suggestions) {
     wireCopyFixButtons();
 }
 
+function renderOperatorPrecedenceAnalysis(analysis) {
+    if (!analysis) return;
+    
+    // Render FIRSTVT
+    const firstvtEl = document.getElementById("firstvt");
+    if (firstvtEl && analysis.firstvt) {
+        firstvtEl.innerHTML = Object.entries(analysis.firstvt)
+            .filter(([_, terminals]) => terminals.length > 0)
+            .map(([nt, terminals]) => `
+                <div class="vt-item">
+                    <strong>${escapeHtml(nt)}:</strong> ${terminals.map(t => `<span class="vt-terminal">${escapeHtml(t)}</span>`).join(" ")}
+                </div>
+            `)
+            .join("") || `<p class="muted">No FIRSTVT terminals found.</p>`;
+    }
+    
+    // Render LASTVT
+    const lastvtEl = document.getElementById("lastvt");
+    if (lastvtEl && analysis.lastvt) {
+        lastvtEl.innerHTML = Object.entries(analysis.lastvt)
+            .filter(([_, terminals]) => terminals.length > 0)
+            .map(([nt, terminals]) => `
+                <div class="vt-item">
+                    <strong>${escapeHtml(nt)}:</strong> ${terminals.map(t => `<span class="vt-terminal">${escapeHtml(t)}</span>`).join(" ")}
+                </div>
+            `)
+            .join("") || `<p class="muted">No LASTVT terminals found.</p>`;
+    }
+    
+    // Render Precedence Relations
+    const relationsEl = document.getElementById("precedenceRelations");
+    if (relationsEl && analysis.precedenceRelations) {
+        if (analysis.precedenceRelations.length === 0) {
+            relationsEl.innerHTML = `<p class="muted">No operator relations found.</p>`;
+            return;
+        }
+        
+        const relationSymbols = {
+            "<": "&#60;",
+            ">": "&#62;",
+            "=": "=",
+            "?": "?"
+        };
+        
+        relationsEl.innerHTML = `
+            <table class="relations-table">
+                <thead>
+                    <tr>
+                        <th>Op1</th>
+                        <th>Relation</th>
+                        <th>Op2</th>
+                        <th>Production</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${analysis.precedenceRelations.map(rel => `
+                        <tr class="relation-row relation-${rel.relation}">
+                            <td class="op-cell"><code>${escapeHtml(rel.op1)}</code></td>
+                            <td class="relation-cell">${relationSymbols[rel.relation] || rel.relation}</td>
+                            <td class="op-cell"><code>${escapeHtml(rel.op2)}</code></td>
+                            <td class="prod-cell"><code>${escapeHtml(rel.production)}</code></td>
+                        </tr>
+                    `).join("")}
+                </tbody>
+            </table>
+        `;
+    }
+}
+
 function replaceWithRect(nodeGroup, fill, stroke, paddingX, paddingY, radius = 12) {
     const text = nodeGroup.querySelector("text");
     if (!text) {
@@ -903,6 +972,7 @@ async function analyzeNow() {
         renderExtracted(data.extracted);
         renderConflicts(data.conflicts);
         renderSuggestions(data.suggestions);
+        renderOperatorPrecedenceAnalysis(data.operatorPrecedenceAnalysis);
         autocorrectEl.textContent = data.autoCorrection.correctedGrammar || data.autoCorrection.message;
         latestAnalysis = data;
         renderParseTrees(data.parseTrees);
