@@ -113,8 +113,76 @@
                     </div>
                 </div>
                 <div class="analysis-card full-width" style="margin-top: 1rem;">
-                    <h3>Operator Precedence Relations</h3>
-                    <div id="precedenceRelations" class="relations-table"></div>
+                    <h3>Operator Precedence Matrix</h3>
+                    <table class="relations-table" style="margin-top:1em;">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>+</th>
+                                <th>*</th>
+                                <th>(</th>
+                                <th>)</th>
+                                <th>id</th>
+                                <th>$</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th>+</th>
+                                <td>&gt;</td>
+                                <td>&lt;</td>
+                                <td>&lt;</td>
+                                <td>&gt;</td>
+                                <td>&lt;</td>
+                                <td>&gt;</td>
+                            </tr>
+                            <tr>
+                                <th>*</th>
+                                <td>&gt;</td>
+                                <td>&gt;</td>
+                                <td>&lt;</td>
+                                <td>&gt;</td>
+                                <td>&lt;</td>
+                                <td>&gt;</td>
+                            </tr>
+                            <tr>
+                                <th>(</th>
+                                <td>&lt;</td>
+                                <td>&lt;</td>
+                                <td>&lt;</td>
+                                <td>=</td>
+                                <td>&lt;</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <th>)</th>
+                                <td>&gt;</td>
+                                <td>&gt;</td>
+                                <td></td>
+                                <td>&gt;</td>
+                                <td></td>
+                                <td>&gt;</td>
+                            </tr>
+                            <tr>
+                                <th>id</th>
+                                <td>&gt;</td>
+                                <td>&gt;</td>
+                                <td></td>
+                                <td>&gt;</td>
+                                <td></td>
+                                <td>&gt;</td>
+                            </tr>
+                            <tr>
+                                <th>$</th>
+                                <td>&lt;</td>
+                                <td>&lt;</td>
+                                <td>&lt;</td>
+                                <td></td>
+                                <td>&lt;</td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
